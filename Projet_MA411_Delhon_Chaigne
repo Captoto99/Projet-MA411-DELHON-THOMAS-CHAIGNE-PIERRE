@@ -1,0 +1,221 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Nov 20 08:34:25 2020
+
+@author: tdelh
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+#------------------------------------------------------
+#-------------Definition of parameters-----------------
+#------------------------------------------------------
+
+N=200
+a=0
+b=1
+h=(b-a)/N
+α=10**(-4) #Flow rate  
+k=h/(3*α) #The multiplicator can be minimum 2.33 to satisfy the CFL condition
+Φ=0.3 #Porosity
+K=10**(-7) #Permeability
+gravity=9.81 #Gravity
+ρw=1000 #Water density
+ρo=900 #Oil density
+β=(K/Φ)*gravity*(ρw-ρo)
+T=9000 #If the value of T is decreased, we need to comment some lines between the lines 135 and 156
+C=4
+
+
+#------------------------------------------------------
+#-------------Definition of functions------------------
+#------------------------------------------------------
+
+def fw(s):
+    return s**2
+
+def fo(s):
+    return ((1-s)**2)/4 #We can change the denominator
+
+def f(s): #s saturation between 0 and 1
+    return (α*fw(s))/(fw(s)+fo(s))
+
+def g(a,b):
+    if -α+β*fw(a) <= 0 :
+        g=(fw(a)*(α+β*fo(a)))/(fw(a)+fo(a))
+    else :
+        g=(fw(a)*(α+β*fo(b)))/(fw(a)+fo(b))
+    return g
+
+def F(a,b):
+    return Φ*g(a,b)
+
+
+#------------------------------------------------------
+#---------------Definition of models-------------------
+#------------------------------------------------------
+#SGAU = Sans Gravité, Avec Upwind
+#AGAU = Avec Gravité, Avec Upwind
+#SGALF = Sans Gravité, Avec Lax-Friedrich
+#------------------------------------------------------
+
+Ssgau=np.zeros((N,T)) 
+Ssgau[0,:]=1
+Sagau=np.zeros((N,T)) 
+Sagau[0,:]=1
+Ssgalf=np.zeros((N,T)) 
+Ssgalf[0,:]=1
+Sgod1=np.zeros((N,T)) 
+Sgod1[0,:]=1
+Sgod2=np.zeros((N,T)) 
+Sgod2[0,:]=1
+
+
+S1=[]
+S10=[]
+S20=[]
+S30=[]
+S40=[]
+S50=[]
+S60=[]
+S70=[]
+S80=[]
+S90=[]
+S94=[]
+OSEF=[]
+
+
+for n in range(T-1):
+    for i in range(1,N-1): #N-1 or problem : index 100 is out of bounds for axis 0 with size 100
+        Ssgau[i,n+1]=Ssgau[i,n]+(k/h)*(f(Ssgau[i-1,n])-f(Ssgau[i,n]))
+        Sagau[i,n+1]=Sagau[i,n]+(k/h)*(F(Sagau[i-1,n],Sagau[i,n])-F(Sagau[i,n],Sagau[i+1,n]))
+        Ssgalf[i,n+1]=(1/2)*(Ssgalf[i+1,n]+Ssgalf[i-1,n]) + (1/2)*(k/h)*(f(Ssgalf[i-1,n])-f(Ssgalf[i+1,n]))
+        Sgod1[i,n+1]=Sgod2[i,n]-(k/h)*(f(Sgod2[i,n])-f(Sgod2[i-1,n]))
+        Sgod2[i,n+1]=(1/2)*Sgod2[i,n]+(1/2)*(Sgod1[i,n+1]-(k/h)*(f(Sgod1[i,n+1])-f(Sgod1[i-1,n+1])))
+    if Sgod2[-2,n] > 0.01 :
+        S1.append(n)
+    if Sgod2[-2,n] > 0.1 :
+        S10.append(n)
+    if Sgod2[-2,n] > 0.2 :
+        S20.append(n)
+    if Sgod2[-2,n] > 0.3 :
+        S30.append(n)
+    if Sgod2[-2,n] > 0.4 :
+        S40.append(n)
+    if Sgod2[-2,n] > 0.5 :
+        S50.append(n)
+    if Sgod2[-2,n] > 0.6 :
+        S60.append(n)
+    if Sgod2[-2,n] > 0.7 :
+        S70.append(n)
+    if Sgod2[-2,n] > 0.8 : 
+        S80.append(n)
+    if Sgod2[-2,n] > 0.9 : 
+        S90.append(n)
+    if Sgod2[-2,n] > 0.94 : 
+        S94.append(n)
+    else:
+        OSEF.append(n)
+
+
+#------------------------------------------------------
+#--------Print of ...% of saturation is reached--------
+#------------------------------------------------------
+
+#Function that transforms seconds into hours, minutes and seconds
+
+def tempsHMS(b):
+    a=round(b)
+    H=a//3600
+    M=(a%3600)//60
+    S=(a%3600)%60
+    return(H,M,S)
+
+ 
+s1=S1[0]*k
+print("The saturation of 1% is reach after",tempsHMS(s1)[0],"hour(s),",tempsHMS(s1)[1],"minutes and",tempsHMS(s1)[2],"seconds") 
+s10=S10[0]*k
+print("The saturation of 10% is reach after",tempsHMS(s10)[0],"hour(s),",tempsHMS(s10)[1],"minutes and",tempsHMS(s10)[2],"seconds") 
+s20=S20[0]*k
+print("The saturation of 20% is reach after",tempsHMS(s20)[0],"hour(s),",tempsHMS(s20)[1],"minutes and",tempsHMS(s20)[2],"seconds") 
+s30=S30[0]*k
+print("The saturation of 30% is reach after",tempsHMS(s30)[0],"hour(s),",tempsHMS(s30)[1],"minutes and",tempsHMS(s30)[2],"seconds")  
+s40=S40[0]*k
+print("The saturation of 40% is reach after",tempsHMS(s40)[0],"hour(s),",tempsHMS(s40)[1],"minutes and",tempsHMS(s40)[2],"seconds")
+s50=S50[0]*k
+print("The saturation of 50% is reach after",tempsHMS(s50)[0],"hour(s),",tempsHMS(s50)[1],"minutes and",tempsHMS(s50)[2],"seconds")
+s60=S60[0]*k
+print("The saturation of 60% is reach after",tempsHMS(s60)[0],"hour(s),",tempsHMS(s60)[1],"minutes and",tempsHMS(s60)[2],"seconds")
+s70=S70[0]*k
+print("The saturation of 70% is reach after",tempsHMS(s70)[0],"hour(s),",tempsHMS(s70)[1],"minutes and",tempsHMS(s70)[2],"seconds")
+s80=S80[0]*k
+print("The saturation of 80% is reach after",tempsHMS(s80)[0],"hour(s),",tempsHMS(s80)[1],"minutes and",tempsHMS(s80)[2],"seconds")
+s90=S90[0]*k
+print("The saturation of 90% is reach after",tempsHMS(s90)[0],"hour(s),",tempsHMS(s90)[1],"minutes and",tempsHMS(s90)[2],"seconds")
+#s94=S94[0]*k
+#print("The saturation of 94% is reach after",tempsHMS(s94)[0],"hour(s),",tempsHMS(s94)[1],"minutes and",tempsHMS(s94)[2],"seconds")
+
+Saturation_finale=round(Sgod2[-2,-1], 3)
+print("The final saturation is", round(Saturation_finale*100,1),"% after",tempsHMS(k*T)[0],"hour(s),",tempsHMS(k*T)[1],"minutes and",tempsHMS(k*T)[2],"seconds")
+
+#------------------------------------------------------
+#---------Saturation at the end of the field-----------
+#------------------------------------------------------
+Xt=[1,10,20,30,40,50,60,70,80,90] #,94
+St=[s1,s10,s20,s30,s40,s50,s60,s70,s80,s90] #,s94
+plt.figure(1)
+plt.title("Saturation at the end of the field in function of time (s)",fontsize=25)
+plt.xlabel("Saturation in %",fontsize=25)
+plt.ylabel("Time is seconds",fontsize=25)
+plt.plot(Xt,St,'goldenrod',linewidth=5)
+
+
+#--------------------------------------------------------------
+#----------------------- Curves -------------------------------
+#--------------------------------------------------------------
+
+X=np.linspace(a,b,N)
+
+#Schéma Upwind avec et sans gravité
+plt.figure(2)
+plt.title('Upwind with and without gravity',fontsize=25)
+plt.plot(X,Ssgau[:,-1],'firebrick', label='Without gravity',linewidth=3)
+plt.plot(X,Sagau[:,-1],'deepskyblue', label='With gravity',linewidth=3)
+plt.legend(prop={'size' : 25})
+plt.show()
+#plt.close()
+
+#Schémas sans gravité d'Upwind, Lax-Friedrich, et Godunov
+plt.figure(3)
+plt.title('Upwind, Lax-Freidrich, and Godunov without gravity',fontsize=25)
+plt.plot(X,Ssgau[:,-1],'deepskyblue', label='With Upwind',linewidth=3)
+plt.plot(X,Ssgalf[:,-1],'firebrick', label='With Lax-Friedrich',linewidth=3)
+plt.plot(X,Sgod2[:,-1],'goldenrod', label='With Godunov',linewidth=3)
+plt.legend(prop={'size' : 25})
+plt.show()
+
+###### Animation with Godunov without gravity ######
+
+from matplotlib.animation import FuncAnimation
+fig, ax = plt.subplots(figsize=(5, 3))
+ax.set(xlim=(a, b), ylim=(0, 1))
+line = ax.plot(X, Sgod2[:,-1], color='goldenrod', lw=2)[0]
+
+def animate(i):
+    line.set_ydata(Sgod2[:,i])
+
+anim = FuncAnimation(fig, animate, interval=100, frames=T)
+
+plt.draw()
+plt.title("Evolution through time")
+plt.show()
+
+"""
+#Print only the godunov scheme (used for the report)
+plt.figure(6)
+plt.title('Godunov without gravity',fontsize=25)
+plt.plot(X,Sgod2[:,-1],'goldenrod', label='With Godunov',linewidth=3)
+plt.legend(prop={'size' : 25})
+plt.show()
+"""
